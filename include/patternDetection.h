@@ -1,10 +1,10 @@
 #ifndef PATTERNDETECTION_H_INCLUDED
 #define PATTERNDETECTION_H_INCLUDED
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/calib3d.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 
 #include <vector>
 #include <fstream>
@@ -22,8 +22,8 @@ struct CalibParams{
     float MAX_MRE=0.5; //!< MRE threshold for stopping optimization.
     unsigned int MAX_IMAGES=90; //!< maximum nb of images to be processed. It is used to avoid dealing with too many images and wait for hours.
     unsigned int MIN_IMAGES=20; //!< minimum nb of images to be considered, if lower, optimization stops.
-    cv::Size board_sz = cv::Size(8,6); //!< size of the calibartion pattern;
-    cv::Size image_size = cv::Size(640,480); //!< size of the images.
+    cv::Size board_sz = cv::Size(8,5); //!< size of the calibartion pattern;
+    cv::Size image_size = cv::Size(744,480); //!< size of the images.
     std::string cam_name=""; //!< name of the camera.
     bool display=false; //!< display option. To display of save rectified images.
     int interval=1; //!< interval between to images.

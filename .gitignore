@@ -3,3 +3,6 @@ obj/
 bin/
 build/
 yml
+
+checker_images/
+checker_images_rec/

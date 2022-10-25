@@ -1,0 +1,4 @@
+./lab_mono_calibration pathToImageFolder cam1_image%05d.png pathToYMLFile.yml
+
+
+./lab_mono_calibration ~/uasl-calibration/checker_images frame_%d.bmp ~/uasl-calibration/outfile -c -p chessboard -e 0.029

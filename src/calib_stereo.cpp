@@ -37,8 +37,8 @@ void stereo_calibrate(std::string pathToImages, std::string filename, CalibParam
     /**** reading intrinsic parameters ****/
 
     Mat K0,K1,D0,D1,R,T,E,F;
-    FileStorage leftFile(left_fname, CV_STORAGE_READ);
-    FileStorage rightFile(right_fname, CV_STORAGE_READ);
+    FileStorage leftFile(left_fname, 0);
+    FileStorage rightFile(right_fname, 0);
     if(leftFile.isOpened() && rightFile.isOpened()){
         leftFile["K"] >> K0;leftFile["D"] >> D0;
         rightFile["K"] >> K1;rightFile["D"] >> D1;
@@ -68,7 +68,7 @@ void stereo_calibrate(std::string pathToImages, std::string filename, CalibParam
     vector<vector<Point3f>> stereo_objectPoints(left_stereoPts.size(),structureBoard);
 
     /**** run stereo calibration *****/
-    stereoCalibrate(stereo_objectPoints,left_stereoPts,right_stereoPts,K0,D0,K1,D1,params.image_size,R,T,E,F, CV_CALIB_USE_INTRINSIC_GUESS | CV_CALIB_FIX_INTRINSIC);
+    stereoCalibrate(stereo_objectPoints,left_stereoPts,right_stereoPts,K0,D0,K1,D1,params.image_size,R,T,E,F, CALIB_USE_INTRINSIC_GUESS | CALIB_FIX_INTRINSIC);
 
     std::cout << "[Calibration stereo] K0: " << endl << K0 << endl;
 	std::cout << "[Calibration stereo] D0: " << endl << D0 << endl;
@@ -78,7 +78,7 @@ void stereo_calibrate(std::string pathToImages, std::string filename, CalibParam
 	std::cout << "[Calibration stereo] T: " << endl << T << endl;
 
 	/**** saving calibration params ****/
-    FileStorage paramsFile(filename, CV_STORAGE_WRITE);
+    FileStorage paramsFile(filename, 1);
 	paramsFile << "K0" << K0 << "D0" << D0 << "K1" << K1 << "D1" << D1 << "R" << R << "T" << T;
     paramsFile.release();
 
@@ -89,9 +89,9 @@ void stereo_rectify(std::string pathToImages, std::string rectFolder, std::strin
 
     /**** read stereo params ****/
     Mat K0,K1,D0,D1,R,T;
-    FileStorage intFile(filename, CV_STORAGE_READ);
+    FileStorage intFile(filename, 0);
 	unsigned dot = filename.find_last_of(".");
-    FileStorage paramsFile(filename.substr(0,dot)+"_stereo.yml", CV_STORAGE_WRITE);
+    FileStorage paramsFile(filename.substr(0,dot)+"_stereo.yml", 1);
     intFile["K0"] >> K0;
 	intFile["D0"] >> D0;
 	intFile["K1"] >> K1;
@@ -141,7 +141,7 @@ void stereo_rectify(std::string pathToImages, std::string rectFolder, std::strin
     while(!img[0].empty() && !img[1].empty()){
         for(int k = 0; k < 2; k++ )
         {
-            remap(img[k], rimg, rmap[k][0], rmap[k][1], CV_INTER_LINEAR);
+            remap(img[k], rimg, rmap[k][0], rmap[k][1], INTER_LINEAR);
             Mat roi(rimg, validRoi[k]); //final rectified image
             stringstream ss;
             ss << rectFolder << params.cam_name.substr(0,found) << k << params.cam_name.substr(found+1,percent-(found+1)) << setw(5) << setfill('0') << lcap.get(CAP_PROP_POS_FRAMES) << "_rec.png";
@@ -150,7 +150,7 @@ void stereo_rectify(std::string pathToImages, std::string rectFolder, std::strin
             if(params.display){
                 Mat test = rimg.clone();
 				if(test.channels() == 1)
-	                cvtColor(test,test,CV_GRAY2RGB);
+	                cvtColor(test,test,COLOR_GRAY2RGB);
                 for(int i = 10;i <test.rows;i+=10)
                     line(test,cv::Point(0,i),cv::Point(test.cols-1,i),cv::Scalar(200,200,0));
 

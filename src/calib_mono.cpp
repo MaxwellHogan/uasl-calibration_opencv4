@@ -37,7 +37,7 @@ void mono_calibrate(string pathToImages, string filename, CalibParams& params){
 
     //initial estimation
     cout << "[Calibration mono] estimating parameters ..." << endl;
-    calibrateCamera(objectPoints,imagePoints,params.image_size,K,D,rvecs,tvecs,CV_CALIB_USE_INTRINSIC_GUESS);
+    calibrateCamera(objectPoints,imagePoints,params.image_size,K,D,rvecs,tvecs,CALIB_USE_INTRINSIC_GUESS);
     // compute initial MRE
     vector<double> mre_values;
     double mre = computeMRE(objectPoints,imagePoints,rvecs,tvecs,K,D,mre_values);
@@ -61,7 +61,7 @@ void mono_calibrate(string pathToImages, string filename, CalibParams& params){
             }
         }
         cout << "[Calibration mono] estimating parameters with " << mre_values.size() << " elements..." << endl;
-        calibrateCamera(objectPoints,imagePoints,params.image_size,K,D,rvecs,tvecs,CV_CALIB_USE_INTRINSIC_GUESS);
+        calibrateCamera(objectPoints,imagePoints,params.image_size,K,D,rvecs,tvecs,CALIB_USE_INTRINSIC_GUESS);
         mre = computeMRE(objectPoints,imagePoints,rvecs,tvecs,K,D,mre_values);
         cout << "[Calibration mono] MRE: " << mre << endl;
     }
@@ -80,7 +80,7 @@ void mono_rectify(string pathToImages, string rectFolder, string filename,CalibP
 
     FileStorage intFile(filename, FileStorage::READ);
     unsigned dot = filename.find_last_of(".");
-    FileStorage paramsFile(filename.substr(0,dot)+"_rectified.yml", CV_STORAGE_WRITE); // calibration parameters of rectified images
+    FileStorage paramsFile(filename.substr(0,dot)+"_rectified.yml", 1); // calibration parameters of rectified images
 
     if(!intFile.isOpened()){
         cerr << "[error] yml file could not be opened." << endl;
@@ -108,6 +108,7 @@ void mono_rectify(string pathToImages, string rectFolder, string filename,CalibP
     Mat new_K = getOptimalNewCameraMatrix(K, D, params.image_size, 0, params.image_size, 0);
     cv::initUndistortRectifyMap(K, D, Mat(),new_K, params.image_size, CV_16SC2, rmap[0], rmap[1]);
 
+
     // saving new calibration parameters
     if( paramsFile.isOpened() )
     {
@@ -130,7 +131,7 @@ void mono_rectify(string pathToImages, string rectFolder, string filename,CalibP
         string nameimg = ss.str();
         std::cout << "[Rectification mono] " << nameimg << "\r";cout.flush();
 
-		remap(img, rimg, rmap[0], rmap[1], CV_INTER_LINEAR);
+		remap(img, rimg, rmap[0], rmap[1], INTER_LINEAR);
 
         //if display, display the rectified image, else save into a file
         if(params.display)
@@ -151,4 +152,3 @@ void mono_calibrateAndRectify(string pathToImages, string rectFolder, string par
     mono_calibrate(pathToImages,paramsFile,params);
     mono_rectify(pathToImages,rectFolder,paramsFile,params);
 }
-

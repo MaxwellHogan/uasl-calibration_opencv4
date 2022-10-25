@@ -1,41 +1,43 @@
 #include "patternDetection.h"
 
+using namespace cv;
+
 /**** Global variables for pattern detection ****/
-static cv::Point2f meanPT;
-static cv::Point2f p1,p2;
-static std::vector<cv::Point2f> ccenters,cornersP;
+static Point2f meanPT;
+static Point2f p1,p2;
+static std::vector<Point2f> ccenters,cornersP;
 /************************************************/
 
 //! Sorting function. Sorts keypoints by distance to the centre of the pattern.
-bool sortKpt(cv::KeyPoint kpt1, cv::KeyPoint kpt2){return (cv::norm(kpt1.pt-meanPT) < cv::norm(kpt2.pt-meanPT));}
+bool sortKpt(KeyPoint kpt1, KeyPoint kpt2){return (norm(kpt1.pt-meanPT) < norm(kpt2.pt-meanPT));}
 //!Sorting function. Sorts features by distance to the centre of the pattern.
-bool sortPt(cv::Point2f pt1, cv::Point2f pt2){return (cv::norm(pt1-meanPT) < cv::norm(pt2-meanPT));}
+bool sortPt(Point2f pt1, Point2f pt2){return (norm(pt1-meanPT) < norm(pt2-meanPT));}
 
 //! Sorting function. Sorts corner features by their angle
-bool sortAngle(cv::Point2f kpt1, cv::Point2f kpt2){
-    cv::Point2f pt1 = kpt1-meanPT, pt2 = kpt2-meanPT;
+bool sortAngle(Point2f kpt1, Point2f kpt2){
+    Point2f pt1 = kpt1-meanPT, pt2 = kpt2-meanPT;
     float det1 = pt1.x*p1.y-(pt1.y*p1.x), det2 = pt2.x*p1.y-(pt2.y*p1.x);
-    return ( (det1>0?1:-1) * acos((pt1.x*p1.x+pt1.y*p1.y)/(cv::norm(pt1)*cv::norm(p1))) < (det2>0?1:-1) * acos((pt2.x*p1.x+pt2.y*p1.y)/(cv::norm(pt2)*cv::norm(p1))));
+    return ( (det1>0?1:-1) * acos((pt1.x*p1.x+pt1.y*p1.y)/(norm(pt1)*norm(p1))) < (det2>0?1:-1) * acos((pt2.x*p1.x+pt2.y*p1.y)/(norm(pt2)*norm(p1))));
 }
 
 //! Sorting function. Sorts the features belonging to the pyramid by their angle.
-bool sortAnglePyr(cv::Point2f kpt1, cv::Point2f kpt2){
-    cv::Point2f pt1 = kpt1-p2, pt2 = kpt2-p2;
+bool sortAnglePyr(Point2f kpt1, Point2f kpt2){
+    Point2f pt1 = kpt1-p2, pt2 = kpt2-p2;
     float det1 = pt1.x*p1.y-(pt1.y*p1.x), det2 = pt2.x*p1.y-(pt2.y*p1.x);
-    return ( (det1>0?1:-1) * acos((pt1.x*p1.x+pt1.y*p1.y)/(cv::norm(pt1)*cv::norm(p1))) < (det2>0?1:-1) * acos((pt2.x*p1.x+pt2.y*p1.y)/(cv::norm(pt2)*cv::norm(p1))));
+    return ( (det1>0?1:-1) * acos((pt1.x*p1.x+pt1.y*p1.y)/(norm(pt1)*norm(p1))) < (det2>0?1:-1) * acos((pt2.x*p1.x+pt2.y*p1.y)/(norm(pt2)*norm(p1))));
 }
 
 //! Sorting function. Helps to find the top of the pyramid
-bool findOrigin(const cv::Point2f& pt1, const cv::Point2f& pt2){
+bool findOrigin(const Point2f& pt1, const Point2f& pt2){
     float min = 1000;
     bool minIdx=true;
     for(unsigned int i=0;i<ccenters.size();i++){
-        if(cv::norm(pt1-ccenters[i]) < min){
-         min = cv::norm(pt1-ccenters[i]);
+        if(norm(pt1-ccenters[i]) < min){
+         min = norm(pt1-ccenters[i]);
          minIdx =true;
         }
-        if(cv::norm(pt2-ccenters[i]) < min){
-         min = cv::norm(pt2-ccenters[i]);
+        if(norm(pt2-ccenters[i]) < min){
+         min = norm(pt2-ccenters[i]);
          minIdx =false;
         }
     }
@@ -43,15 +45,15 @@ bool findOrigin(const cv::Point2f& pt1, const cv::Point2f& pt2){
 }
 
 //! refine blob centre detection. It is assumed that 2D feature follow a normal distribution. It does not take into account distortions due to projections.
-void refineCentreDetection(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoints){
+void refineCentreDetection(const Mat& img, std::vector<KeyPoint>& keypoints){
 
-    for(cv::KeyPoint& kp : keypoints){
+    for(KeyPoint& kp : keypoints){
         // defining window around feature
         int win_size = 2*kp.size;
-        cv::Rect win_rect(kp.pt.x-win_size/2,kp.pt.y-win_size/2,win_size+1,win_size+1);
+        Rect win_rect(kp.pt.x-win_size/2,kp.pt.y-win_size/2,win_size+1,win_size+1);
         if(!(win_rect.x >0) || !(win_rect.y > 0) || win_rect.x+win_size+1>img.cols-1 || win_rect.y+win_size+1>img.rows-1) //if window is out of boundaries skip refinement
             continue;
-        cv::Mat window = img(win_rect);
+        Mat window = img(win_rect);
         // computing of pixels sample
         double x_mean=0,y_mean=0,weight_x=0,weight_y=0;
         for(int i=0;i<win_size;i++){
@@ -68,110 +70,111 @@ void refineCentreDetection(const cv::Mat& img, std::vector<cv::KeyPoint>& keypoi
     }
 }
 
-void calcPatternPosition(std::vector<cv::Point3f>& corners,CalibParams& params)
+void calcPatternPosition(std::vector<Point3f>& corners,CalibParams& params)
 {
     corners.clear();
 
     switch(params.calib_pattern)
     {
         case Pattern::CHESSBOARD:
+          std::cout<<"Here"<<std::endl;
         case Pattern::CIRCLES_GRID:
           for( int i = 0; i < params.board_sz.height; ++i )
             for( int j = 0; j < params.board_sz.width; ++j )
-                corners.push_back(cv::Point3f(float( j*params.element_size ), float( i*params.element_size ), 0));
+                corners.push_back(Point3f(float( j*params.element_size ), float( i*params.element_size ), 0));
           break;
 
         case Pattern::ASYMMETRIC_CIRCLES_GRID:
           for( int i = 0; i < params.board_sz.height; i++ )
              for( int j = 0; j < params.board_sz.width; j++ )
-                corners.push_back(cv::Point3f(float((2*j + i % 2)*params.element_size), float(i*params.element_size), 0));
+                corners.push_back(Point3f(float((2*j + i % 2)*params.element_size), float(i*params.element_size), 0));
           break;
 
         case Pattern::PYRAMID:
-            corners.push_back(cv::Point3f(0.450,0.240,0));
-            corners.push_back(cv::Point3f(0.375,0.150,0));
-            corners.push_back(cv::Point3f(0.300,0.240,0));
-            corners.push_back(cv::Point3f(0.375,0.330,0));
-            corners.push_back(cv::Point3f(0.525,0.150,0));
-            corners.push_back(cv::Point3f(0.225,0.150,0));
+            corners.push_back(Point3f(0.450,0.240,0));
+            corners.push_back(Point3f(0.375,0.150,0));
+            corners.push_back(Point3f(0.300,0.240,0));
+            corners.push_back(Point3f(0.375,0.330,0));
+            corners.push_back(Point3f(0.525,0.150,0));
+            corners.push_back(Point3f(0.225,0.150,0));
             //bottom right
-            corners.push_back(cv::Point3f(0.600,0.000,0));
-            corners.push_back(cv::Point3f(0.750,0.000,0));
-            corners.push_back(cv::Point3f(0.750,0.150,0));
+            corners.push_back(Point3f(0.600,0.000,0));
+            corners.push_back(Point3f(0.750,0.000,0));
+            corners.push_back(Point3f(0.750,0.150,0));
             //top right
-            corners.push_back(cv::Point3f(0.750,0.330,0));
-            corners.push_back(cv::Point3f(0.750,0.480,0));
-            corners.push_back(cv::Point3f(0.600,0.480,0));
+            corners.push_back(Point3f(0.750,0.330,0));
+            corners.push_back(Point3f(0.750,0.480,0));
+            corners.push_back(Point3f(0.600,0.480,0));
             //top left
-            corners.push_back(cv::Point3f(0.150,0.480,0));
-            corners.push_back(cv::Point3f(0.000,0.480,0));
-            corners.push_back(cv::Point3f(0.000,0.330,0));
+            corners.push_back(Point3f(0.150,0.480,0));
+            corners.push_back(Point3f(0.000,0.480,0));
+            corners.push_back(Point3f(0.000,0.330,0));
             //bottom left
-            corners.push_back(cv::Point3f(0.000,0.150,0));
-            corners.push_back(cv::Point3f(0.000,0.000,0));
-            corners.push_back(cv::Point3f(0.150,0.000,0));
+            corners.push_back(Point3f(0.000,0.150,0));
+            corners.push_back(Point3f(0.000,0.000,0));
+            corners.push_back(Point3f(0.150,0.000,0));
             break;
     }
 }
 
-void drawPyramidPattern(cv::Mat& img, std::vector<cv::Point2f>& centers, bool found){
+void drawPyramidPattern(Mat& img, std::vector<Point2f>& centers, bool found){
 
-    cv::line(img, meanPT, meanPT+cv::Point2f(0,10), cv::Scalar(0,255,0), 1, CV_AA);
-    cv::line(img, meanPT, meanPT+cv::Point2f(10,0), cv::Scalar(0,255,0), 1, CV_AA);
-    cv::line(img, meanPT, meanPT+p1, cv::Scalar(255,255,255), 1, CV_AA);
+    line(img, meanPT, meanPT+Point2f(0,10), Scalar(0,255,0), 1, LINE_AA);
+    line(img, meanPT, meanPT+Point2f(10,0), Scalar(0,255,0), 1, LINE_AA);
+    line(img, meanPT, meanPT+p1, Scalar(255,255,255), 1, LINE_AA);
     if(ccenters.size() > 0){
-        cv::circle(img,ccenters[0],3,cv::Scalar(255,255,255));
-        cv::circle(img,ccenters[1],3,cv::Scalar(255,255,255));
-        cv::circle(img,ccenters[2],3,cv::Scalar(255,255,255));
-        cv::circle(img,ccenters[3],3,cv::Scalar(255,255,255));
+        circle(img,ccenters[0],3,Scalar(255,255,255));
+        circle(img,ccenters[1],3,Scalar(255,255,255));
+        circle(img,ccenters[2],3,Scalar(255,255,255));
+        circle(img,ccenters[3],3,Scalar(255,255,255));
     }
     else
         std::cerr << "not enough clusters!" << std::endl;
     if(found){
-        cv::line(img, centers[0], centers[3], cv::Scalar(0,0,255),2);
-        cv::line(img, centers[0], centers[2], cv::Scalar(0,0,255),2);
-        cv::line(img, centers[3], centers[2], cv::Scalar(0,0,255),2);
-        cv::line(img, centers[1], centers[0], cv::Scalar(0,0,255),2);
-        cv::line(img, centers[4], centers[1], cv::Scalar(0,0,255),2);
-        cv::line(img, centers[4], centers[0], cv::Scalar(0,0,255),2);
-        cv::line(img, centers[1], centers[2], cv::Scalar(0,0,255),2);
-        cv::line(img, centers[5], centers[1], cv::Scalar(0,0,255),2);
-        cv::line(img, centers[5], centers[2], cv::Scalar(0,0,255),2);
+        line(img, centers[0], centers[3], Scalar(0,0,255),2);
+        line(img, centers[0], centers[2], Scalar(0,0,255),2);
+        line(img, centers[3], centers[2], Scalar(0,0,255),2);
+        line(img, centers[1], centers[0], Scalar(0,0,255),2);
+        line(img, centers[4], centers[1], Scalar(0,0,255),2);
+        line(img, centers[4], centers[0], Scalar(0,0,255),2);
+        line(img, centers[1], centers[2], Scalar(0,0,255),2);
+        line(img, centers[5], centers[1], Scalar(0,0,255),2);
+        line(img, centers[5], centers[2], Scalar(0,0,255),2);
 
-        cv::line(img, centers[6], centers[7], cv::Scalar(255,0,0),2);
-        cv::line(img, centers[7], centers[8], cv::Scalar(255,0,0),2);
-        cv::line(img, centers[6], centers[8], cv::Scalar(255,0,0),2);
+        line(img, centers[6], centers[7], Scalar(255,0,0),2);
+        line(img, centers[7], centers[8], Scalar(255,0,0),2);
+        line(img, centers[6], centers[8], Scalar(255,0,0),2);
 
-        cv::line(img, centers[9], centers[10], cv::Scalar(0,255,0),2);
-        cv::line(img, centers[10], centers[11], cv::Scalar(0,255,0),2);
-        cv::line(img, centers[9], centers[11], cv::Scalar(0,255,0),2);
+        line(img, centers[9], centers[10], Scalar(0,255,0),2);
+        line(img, centers[10], centers[11], Scalar(0,255,0),2);
+        line(img, centers[9], centers[11], Scalar(0,255,0),2);
 
-        cv::line(img, centers[12], centers[13], cv::Scalar(255,0,0),2);
-        cv::line(img, centers[13], centers[14], cv::Scalar(255,0,0),2);
-        cv::line(img, centers[12], centers[14], cv::Scalar(255,0,0),2);
+        line(img, centers[12], centers[13], Scalar(255,0,0),2);
+        line(img, centers[13], centers[14], Scalar(255,0,0),2);
+        line(img, centers[12], centers[14], Scalar(255,0,0),2);
 
-        cv::line(img, centers[15], centers[16], cv::Scalar(0,255,0),2);
-        cv::line(img, centers[16], centers[17], cv::Scalar(0,255,0),2);
-        cv::line(img, centers[15], centers[17], cv::Scalar(0,255,0),2);
+        line(img, centers[15], centers[16], Scalar(0,255,0),2);
+        line(img, centers[16], centers[17], Scalar(0,255,0),2);
+        line(img, centers[15], centers[17], Scalar(0,255,0),2);
 
     }
         for( size_t i = 0; i < centers.size(); i++ ){
-        cv::Scalar colour(i*10,0,255-(i*10));
+        Scalar colour(i*10,0,255-(i*10));
         if(i<6)
             circle(img, centers[i], 1, colour, -1, 8, 0 );
         else
             circle(img, centers[i], 1, colour, -1, 8, 0 );
 
         std::stringstream ss; ss << i;
-        putText(img,ss.str(),centers[i],0,0.5,cv::Scalar(0,255,0));
+        putText(img,ss.str(),centers[i],0,0.5,Scalar(0,255,0));
     }
 }
 
-bool findPyramid(const cv::Mat& img, std::vector<cv::Point2f>& centers){
+bool findPyramid(const Mat& img, std::vector<Point2f>& centers){
 
     centers.clear();
     /**** Blob detection ****/
-    cv::SimpleBlobDetector::Params params;
+    SimpleBlobDetector::Params params;
     params.minThreshold = 0;
     params.maxThreshold = 255;
     params.filterByColor = true;
@@ -187,9 +190,9 @@ bool findPyramid(const cv::Mat& img, std::vector<cv::Point2f>& centers){
     // Filter by Inertia
     params.filterByInertia = true;
     params.minInertiaRatio = 0.2;
-    cv::Ptr<cv::SimpleBlobDetector> blobdet = cv::SimpleBlobDetector::create(params);
+    Ptr<SimpleBlobDetector> blobdet = SimpleBlobDetector::create(params);
 
-    std::vector<cv::KeyPoint> keypoints;
+    std::vector<KeyPoint> keypoints;
     blobdet->detect( img, keypoints);
 
     std::cout << keypoints.size() << " keypoints \r ";std::cout.flush();
@@ -199,11 +202,11 @@ bool findPyramid(const cv::Mat& img, std::vector<cv::Point2f>& centers){
     refineCentreDetection(img,keypoints);
 
     /**** finding center of the pattern ****/
-     meanPT = cv::Point2f(0,0);
+     meanPT = Point2f(0,0);
 
      for( unsigned int i = 0; i < keypoints.size(); i++ )
     {
-         cv::Point2f center(keypoints[i].pt.x, keypoints[i].pt.y);
+         Point2f center(keypoints[i].pt.x, keypoints[i].pt.y);
          centers.push_back(keypoints[i].pt);
          meanPT += center;
     }
@@ -215,20 +218,20 @@ bool findPyramid(const cv::Mat& img, std::vector<cv::Point2f>& centers){
     std::sort(centers.begin(),centers.end(),sortPt);
 
     // center position refinement with only features from the center of the pyramid
-    meanPT = cv::Point2f(0,0);
+    meanPT = Point2f(0,0);
     for(uint i=0;i<3;i++)
         meanPT += centers[i];
     meanPT/=3;
     // selecting corner features
     cornersP.clear();
     cornersP.insert(cornersP.end(),centers.begin()+6,centers.end());
-    cv::Mat labels,ccenters_;
+    Mat labels,ccenters_;
     //kmeans to cluster the 4 corners
-    cv::kmeans(cornersP,4,labels,cv::TermCriteria(cv::TermCriteria::EPS,50,0.1),20,cv::KMEANS_RANDOM_CENTERS,ccenters_);
+    kmeans(cornersP,4,labels,TermCriteria(TermCriteria::EPS,50,0.1),20,KMEANS_RANDOM_CENTERS,ccenters_);
     ccenters.clear();
     //computing the center of each corner
     for(unsigned int k=0;k<4;k++)
-        ccenters.push_back(cv::Point2f(ccenters_.at<float>(k,0),ccenters_.at<float>(k,1)));
+        ccenters.push_back(Point2f(ccenters_.at<float>(k,0),ccenters_.at<float>(k,1)));
 
     //finding the origin of the pyramid (top summit)
     std::sort(centers.begin()+3,centers.begin()+6,findOrigin);
@@ -252,40 +255,40 @@ bool findPyramid(const cv::Mat& img, std::vector<cv::Point2f>& centers){
     return ratio1 && ratio2 && ratio3 && corner1 && corner2 && corner3 && corner4;
 }
 
-std::vector<std::vector<cv::Point2f>> findPattern(const std::string& pathToImages, std::vector<int>& image_idx, CalibParams& params){
+std::vector<std::vector<Point2f>> findPattern(const std::string& pathToImages, std::vector<int>& image_idx, CalibParams& params){
 
-    cv::VideoCapture cap(pathToImages+"/"+params.cam_name);
+    VideoCapture cap(pathToImages+"/"+params.cam_name);
 	std::cout << "[Calibration] opening " << pathToImages+"/"+params.cam_name << std::endl;
-    std::vector<std::vector<cv::Point2f>> imagePoints;
+    std::vector<std::vector<Point2f>> imagePoints;
     image_idx.clear();
-    cv::namedWindow("calibration",cv::WINDOW_NORMAL);
+    namedWindow("calibration",WINDOW_NORMAL);
     if(!cap.isOpened()){
         std::cerr << "could not open video or find images. exiting..." << std::endl;
         exit(-1);
     }else{
-        params.image_size.height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);params.image_size.width = cap.get(cv::CAP_PROP_FRAME_WIDTH);}
+        params.image_size.height = cap.get(CAP_PROP_FRAME_HEIGHT);params.image_size.width = cap.get(CAP_PROP_FRAME_WIDTH);}
 
-    cv::Mat img, rimg;
+    Mat img, rimg;
     cap >> img;
     while(!img.empty()){
 
         /**** reading or acquiring the current frame ***/
         if(img.channels()>1){
             rimg = img.clone();
-            cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
+            cvtColor(img, img, COLOR_BGR2GRAY);
         }else
-            cv::cvtColor(img, rimg, cv::COLOR_GRAY2BGR);
+            cvtColor(img, rimg, COLOR_GRAY2BGR);
 
         /**** detecting the calibration pattern ****/
-        std::vector<cv::Point2f> corners;
+        std::vector<Point2f> corners;
         bool found=false;
         switch(params.calib_pattern){
             case Pattern::CHESSBOARD:
-                found = cv::findChessboardCorners(rimg, params.board_sz, corners, CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FILTER_QUADS);break;
+                found = findChessboardCorners(rimg, params.board_sz, corners, CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_FILTER_QUADS);break;
             case Pattern::ASYMMETRIC_CIRCLES_GRID:
-                found = cv::findCirclesGrid(rimg, params.board_sz, corners,cv::CALIB_CB_ASYMMETRIC_GRID);break;
+                found = findCirclesGrid(rimg, params.board_sz, corners,CALIB_CB_ASYMMETRIC_GRID);break;
             case Pattern::CIRCLES_GRID:
-                found = cv::findCirclesGrid(rimg, params.board_sz, corners,cv::CALIB_CB_SYMMETRIC_GRID);break;
+                found = findCirclesGrid(rimg, params.board_sz, corners,CALIB_CB_SYMMETRIC_GRID);break;
             case Pattern::PYRAMID:
                 found = findPyramid(img, corners);break;
         }
@@ -294,26 +297,26 @@ std::vector<std::vector<cv::Point2f>> findPattern(const std::string& pathToImage
             /**** displaying the pattern ****/
             switch(params.calib_pattern){
                 case Pattern::CHESSBOARD:
-                    cv::drawChessboardCorners(rimg, params.board_sz,corners, found);break;
+                    drawChessboardCorners(rimg, params.board_sz,corners, found);break;
                 case Pattern::ASYMMETRIC_CIRCLES_GRID:
-                    cv::drawChessboardCorners(rimg, params.board_sz,corners, found);break;
+                    drawChessboardCorners(rimg, params.board_sz,corners, found);break;
                 case Pattern::CIRCLES_GRID:
-                    cv::drawChessboardCorners(rimg, params.board_sz,corners, found);break;
+                    drawChessboardCorners(rimg, params.board_sz,corners, found);break;
                 case Pattern::PYRAMID:
                     drawPyramidPattern(rimg,corners, found);break;
             }
 
             imshow("calibration", rimg);
             char k;
-            k = cv::waitKey(100);
+            k = waitKey(100);
             imagePoints.push_back(corners);
-            image_idx.push_back(cap.get(cv::CAP_PROP_POS_FRAMES));
+            image_idx.push_back(cap.get(CAP_PROP_POS_FRAMES));
             if(k == 'c') // if c is pressed, stop the acquisition
                 break;
         }else{
         //                cerr << "chessboard not found" << endl;
-            cv::imshow("calibration", rimg);
-            cv::waitKey(100);
+            imshow("calibration", rimg);
+            waitKey(100);
         }
 
 
@@ -321,54 +324,54 @@ std::vector<std::vector<cv::Point2f>> findPattern(const std::string& pathToImage
             cap >> img;
     }
 	cap.release();
-	cv::destroyAllWindows();
+	destroyAllWindows();
     return imagePoints;
 }
 
-void findPatternStereo(const std::string& pathToImages, std::vector<std::vector<cv::Point2f>>& leftPoints, std::vector<std::vector<cv::Point2f>>& rightPoints, CalibParams& params){
+void findPatternStereo(const std::string& pathToImages, std::vector<std::vector<Point2f>>& leftPoints, std::vector<std::vector<Point2f>>& rightPoints, CalibParams& params){
 
     leftPoints.clear();rightPoints.clear();
-    cv::namedWindow("cleft",cv::WINDOW_NORMAL);cv::namedWindow("cright",cv::WINDOW_NORMAL);
-    cv::VideoCapture cap_left,cap_right;
+    namedWindow("cleft",WINDOW_NORMAL);namedWindow("cright",WINDOW_NORMAL);
+    VideoCapture cap_left,cap_right;
 
     if(unsigned found = params.cam_name.find_last_of("X")){
         cap_left.open(pathToImages + "/" + params.cam_name.substr(0,found) + "0" + params.cam_name.substr(found+1,params.cam_name.size()));
         cap_right.open(pathToImages + "/" + params.cam_name.substr(0,found) + "1" + params.cam_name.substr(found+1,params.cam_name.size()));
-        params.image_size.height = cap_left.get(cv::CAP_PROP_FRAME_HEIGHT);params.image_size.width = cap_left.get(cv::CAP_PROP_FRAME_WIDTH);
+        params.image_size.height = cap_left.get(CAP_PROP_FRAME_HEIGHT);params.image_size.width = cap_left.get(CAP_PROP_FRAME_WIDTH);
     }else{
         std::cerr << "[Calibration] could not identify variable X in camera name." << std::endl;
         exit(-1);
     }
 
-    cv::Mat limg, rimg,climg,crimg;
+    Mat limg, rimg,climg,crimg;
     cap_left >> limg;
     cap_right >> rimg;
     while(!limg.empty() && !rimg.empty()){
         /**** reading images ****/
         if(limg.channels()>1){
             climg = limg.clone();
-            cv::cvtColor(limg, limg, cv::COLOR_BGR2GRAY);
+            cvtColor(limg, limg, COLOR_BGR2GRAY);
         }else
-            cv::cvtColor(limg, climg, cv::COLOR_GRAY2BGR);
+            cvtColor(limg, climg, COLOR_GRAY2BGR);
         if(rimg.channels()>1){
             crimg = rimg.clone();
-            cv::cvtColor(rimg, rimg, cv::COLOR_BGR2GRAY);
+            cvtColor(rimg, rimg, COLOR_BGR2GRAY);
         }else
-            cv::cvtColor(rimg, crimg, cv::COLOR_GRAY2BGR);
+            cvtColor(rimg, crimg, COLOR_GRAY2BGR);
 
-        std::vector<cv::Point2f> lcorners,rcorners;
+        std::vector<Point2f> lcorners,rcorners;
         bool lfound=false,rfound=false;
         /**** detecting the calibration pattern ****/
         switch(params.calib_pattern){
             case Pattern::CHESSBOARD:
-                lfound = cv::findChessboardCorners(limg, params.board_sz, lcorners, CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FILTER_QUADS);
-                rfound = cv::findChessboardCorners(rimg, params.board_sz, rcorners, CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FILTER_QUADS);break;
+                lfound = findChessboardCorners(limg, params.board_sz, lcorners, CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_FILTER_QUADS);
+                rfound = findChessboardCorners(rimg, params.board_sz, rcorners, CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_FILTER_QUADS);break;
             case Pattern::ASYMMETRIC_CIRCLES_GRID:
-                lfound = cv::findCirclesGrid(limg, params.board_sz, lcorners,cv::CALIB_CB_ASYMMETRIC_GRID);
-                rfound = cv::findCirclesGrid(rimg, params.board_sz, rcorners,cv::CALIB_CB_ASYMMETRIC_GRID);break;
+                lfound = findCirclesGrid(limg, params.board_sz, lcorners,CALIB_CB_ASYMMETRIC_GRID);
+                rfound = findCirclesGrid(rimg, params.board_sz, rcorners,CALIB_CB_ASYMMETRIC_GRID);break;
             case Pattern::CIRCLES_GRID:
-                lfound = cv::findCirclesGrid(limg, params.board_sz, lcorners,cv::CALIB_CB_SYMMETRIC_GRID);
-                rfound = cv::findCirclesGrid(rimg, params.board_sz, rcorners,cv::CALIB_CB_SYMMETRIC_GRID);break;
+                lfound = findCirclesGrid(limg, params.board_sz, lcorners,CALIB_CB_SYMMETRIC_GRID);
+                rfound = findCirclesGrid(rimg, params.board_sz, rcorners,CALIB_CB_SYMMETRIC_GRID);break;
             case Pattern::PYRAMID:
                 lfound = findPyramid(limg, lcorners);
                 rfound = findPyramid(rimg, rcorners);break;
@@ -378,14 +381,14 @@ void findPatternStereo(const std::string& pathToImages, std::vector<std::vector<
             /**** displaying the calibration pattern ****/
             switch(params.calib_pattern){
                 case Pattern::CHESSBOARD:
-                    cv::drawChessboardCorners(climg, params.board_sz,lcorners, lfound);
-                    cv::drawChessboardCorners(crimg, params.board_sz,rcorners, rfound);break;
+                    drawChessboardCorners(climg, params.board_sz,lcorners, lfound);
+                    drawChessboardCorners(crimg, params.board_sz,rcorners, rfound);break;
                 case Pattern::ASYMMETRIC_CIRCLES_GRID:
-                    cv::drawChessboardCorners(climg, params.board_sz,lcorners, lfound);
-                    cv::drawChessboardCorners(crimg, params.board_sz,rcorners, rfound);break;
+                    drawChessboardCorners(climg, params.board_sz,lcorners, lfound);
+                    drawChessboardCorners(crimg, params.board_sz,rcorners, rfound);break;
                 case Pattern::CIRCLES_GRID:
-                    cv::drawChessboardCorners(climg, params.board_sz,lcorners, lfound);
-                    cv::drawChessboardCorners(crimg, params.board_sz,rcorners, rfound);break;
+                    drawChessboardCorners(climg, params.board_sz,lcorners, lfound);
+                    drawChessboardCorners(crimg, params.board_sz,rcorners, rfound);break;
                 case Pattern::PYRAMID:
                     drawPyramidPattern(climg,lcorners, lfound);
                     drawPyramidPattern(crimg,rcorners, rfound);break;
@@ -394,15 +397,15 @@ void findPatternStereo(const std::string& pathToImages, std::vector<std::vector<
             imshow("cleft", climg);
             imshow("cright", crimg);
             char k;
-            k = cv::waitKey(100);
+            k = waitKey(100);
             leftPoints.push_back(lcorners);
             rightPoints.push_back(rcorners);
             if(k == 'c') // if c is pressed, stop the detection
                 break;
         }else{
-            cv::imshow("cleft", climg);
-            cv::imshow("cright", crimg);
-            cv::waitKey(100);
+            imshow("cleft", climg);
+            imshow("cright", crimg);
+            waitKey(100);
         }
 
         for(int i=0;i<params.interval;i++){
@@ -410,12 +413,12 @@ void findPatternStereo(const std::string& pathToImages, std::vector<std::vector<
             cap_right >> rimg;
         }
     }
-    cv::destroyAllWindows();
+    destroyAllWindows();
 }
 
-double computeMRE(const std::vector<std::vector<cv::Point3f>>& objectPoints, const std::vector<std::vector<cv::Point2f>>& imagePts, const std::vector<cv::Mat>& rvecs, const std::vector<cv::Mat>& tvecs, const cv::Mat& K, const cv::Mat& dist, std::vector<double>& repValues){
+double computeMRE(const std::vector<std::vector<Point3f>>& objectPoints, const std::vector<std::vector<Point2f>>& imagePts, const std::vector<Mat>& rvecs, const std::vector<Mat>& tvecs, const Mat& K, const Mat& dist, std::vector<double>& repValues){
 
-    std::vector<cv::Point2f> reprojPts;
+    std::vector<Point2f> reprojPts;
     repValues.clear();
     double mre=0;
     for(unsigned int p=0;p<objectPoints.size();p++){

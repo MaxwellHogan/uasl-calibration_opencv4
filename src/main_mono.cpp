@@ -60,6 +60,7 @@ int main(int argc, char** argv){
             params.MAX_MRE = stof(optarg);
             break;
         case 'p':
+            std::cout<<string(optarg)<<std::endl;
             if(string(optarg)=="chessboard")
                 params.calib_pattern = Pattern::CHESSBOARD;
             if(string(optarg)=="pyramid")
