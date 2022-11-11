@@ -41,7 +41,7 @@ USAGE
 
 lab_mono_calibration [IMAGEPATH] [IMAGEEXP] [YMLPATH] -[OPTIONS]
 
-	./lab_mono_calibration ~/uasl-calibration_opencv4/checker_images frame_%d.bmp ~/uasl-calibration/outfile -c -p chessboard -e 0.029 
+	./lab_mono_calibration ~/uasl-calibration_opencv4/raw frame_%08d.bmp ~/uasl-calibration/kmat -c -p chessboard -e 0.03
 
     ./lab_mono_calibration pathToImageFolder cam1_image%05d.png pathToYMLFile.yml | using a sequence of images
     ./lab_mono_calibration pathToImageFolder calibration_vid.mp4 pathToYMLFile.yml | using a video

@@ -2,7 +2,13 @@
 obj/
 bin/
 build/
-yml
+*.yml
+*.png
+*.bmp
+*.jpg
 
 checker_images/
 checker_images_rec/
+
+raw/ 
+raw_rec/
